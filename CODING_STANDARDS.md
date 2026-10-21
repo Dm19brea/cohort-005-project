@@ -42,6 +42,14 @@ Test setup calls the module's own functions. When the function you need does
 not exist, add it to the module rather than inserting rows directly, so a
 change to how the module stores its data leaves its tests alone.
 
+## A split the token check forced is in scope
+
+The pre-commit hook (`scripts/check-file-tokens.js`) refuses any commit that
+touches a file over 5000 tokens, so a one-line fix to an oversized file
+arrives with a split. That split belongs to every ticket. Review it as a
+move: the code arrives unchanged in its new home, and the new files follow
+every rule here, function length included.
+
 ## Wrap related writes in a transaction
 
 Two writes that must both land, or neither, go in a transaction. If the second
@@ -88,6 +96,26 @@ Anything the browser can read is public. A secret is read only in a
 Rendering is for working out what the output is, not for doing something.
 Anything that touches the outside world belongs in an effect or an action.
 
+## Key a controlled field by the record it edits
+
+A form field whose value lives in `useState` keeps that state when the route
+changes underneath it. Give the component a `key` of the record's id, so
+moving to another record starts a fresh draft. The lesson notes box once
+carried lesson A's draft onto lesson B, and one click on Save overwrote B's
+note.
+
+```tsx
+return <LessonNote key={lesson.id} note={note} />;
+```
+
+## Client and server share one normalisation
+
+When the server trims, lowercases or measures a value before it stores it,
+the client calls the same function before it compares or counts. Put the
+function in a plain `app/lib/` or module file both sides import. The notes
+box once compared the raw text against the trimmed note the server kept, so
+"Unsaved changes" never cleared after a save.
+
 ## Derive, do not store
 
 If a value can be worked out from another value you already hold, work it out.
@@ -103,28 +131,15 @@ const [items, setItems] = useState(rows);
 const count = items.length;
 ```
 
-## A comment explains why
+## A decision lives in an ADR, not a comment
 
-Name and extract until a comment is unnecessary. A comment earns its place
-only for a _why_ the code cannot express: a constraint, a decision, a link to
-the ADR behind it. A comment that restates _what_ the code does goes stale the
-first time the code changes.
+Name and extract until the code needs no comment. A product or design
+decision ("notes sit under the video so the Student can write while they
+watch") goes in an ADR in `docs/adr/`, where it can be found and
+superseded. A comment holding one goes stale the moment someone changes the
+code without reading it.
 
-## The diff is the ticket
-
-Every change in the diff serves the ticket. A refactor the ticket does not ask
-for gets its own ticket. A notes restyle once arrived inside a 2,000-line split
-of the lesson route, and the review stopped reading partway through.
-
-## What a person typed survives a change of view
-
-Switching a tab, closing a panel or paging a list keeps text that is not saved
-yet. Radix unmounts an inactive `TabsContent`, and a form's state goes with it:
-pass `forceMount`, as `courses.$slug.purchase.tsx` does, or hold the state
-above the tabs.
-
-## Kill a mutant with a test
-
-A surviving mutant gets a test that fails on it. The code under test changes
-only when the mutant shows it is wrong. Text a person reads stays as it was: a
-note limit once went from "2,000" to "2000" to please the mutation run.
+When a diff touches a comment that records a decision, delete the comment,
+write the ADR if the decision still stands, and name both in the PR. Several
+such comments in one area mean decisions are skipping the ADR step: flag
+that in the PR too.

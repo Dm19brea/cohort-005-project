@@ -8,13 +8,16 @@ import { factoryAgent, required, writeJson } from "../shared/common";
 import { extractionPrompt } from "../shared/extraction-prompt";
 import { runWithExtraction } from "../shared/run-with-extraction";
 import { diffLines } from "./diff-lines";
+import { addLeftFindings } from "./left-findings";
 import { reviewSchema } from "./review-schema";
 
 const BASE_REF = required("BASE_REF");
+const VERDICT = "/tmp/review-verdict.md";
 
 // The agent fixes and commits, writes the verdict file, and hands back the
-// findings it left. The workflow pushes the commits, posts the verdict and
-// the inline comments, and marks the PR ready.
+// findings it left. This script lists those findings in the verdict. The
+// workflow pushes the commits, posts the verdict and the inline comments,
+// and marks the PR ready.
 const result = await runWithExtraction({
   name: "review",
   agent: factoryAgent(),
@@ -36,31 +39,32 @@ const git = (...args: string[]): string =>
 // The diff after the agent's commits: the comments land on that.
 const hunks = diffLines(git("diff", `origin/${BASE_REF}...HEAD`));
 const { comments: found }: z.infer<typeof reviewSchema> = result.output;
-const inDiff = ({ path: file, line }: (typeof found)[number]): boolean =>
+const inDiff = ({ path: file, line }: { path: string; line: number }) =>
   hunks.get(file)?.has(line) ?? false;
-const comments = found.filter(inDiff);
-const outside = found.filter((comment) => !inDiff(comment));
-
-// GitHub takes no inline comment outside the diff, and a finding on a line is
-// written nowhere else, so these go at the end of the verdict.
-if (outside.length > 0) {
-  fs.appendFileSync(
-    "/tmp/review-verdict.md",
-    [
-      "",
-      "## Findings outside the diff",
-      ...outside.map(
-        ({ path: file, line, body }) => `- \`${file}:${line}\`: ${body}`
-      ),
-      "",
-    ].join("\n")
+const posted = found.filter(inDiff);
+const dropped = found.filter((comment) => !inDiff(comment));
+for (const { path: file, line } of dropped) {
+  console.error(
+    `${file}:${line} is not in the diff: the finding goes in the verdict.`
   );
 }
+
+// With no verdict, the findings still need a home. No `## Standards:`
+// heading, so the workflow leaves the PR a draft.
+const verdict = fs.existsSync(VERDICT)
+  ? fs.readFileSync(VERDICT, "utf8")
+  : "The review run produced no verdict. See the logs. Re-add `agent:review` to retry.\n";
+fs.writeFileSync(VERDICT, addLeftFindings(verdict, posted, dropped));
 
 // The request body for POST /repos/{owner}/{repo}/pulls/{n}/reviews.
 writeJson("review-comments.json", {
   commit_id: git("rev-parse", "HEAD").trim(),
   event: "COMMENT",
   body: "The findings this review left for you, on their lines. The verdict is in its own comment.",
-  comments: comments.map((comment) => ({ ...comment, side: "RIGHT" })),
+  comments: posted.map(({ path: file, line, body }) => ({
+    path: file,
+    line,
+    body,
+    side: "RIGHT",
+  })),
 });

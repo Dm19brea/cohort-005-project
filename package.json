@@ -27,9 +27,10 @@
     "lint:boundaries": "depcruise app --cache node_modules/.cache/dependency-cruiser",
     "lint:tokens": "node scripts/check-file-tokens.js",
     "lint:exemptions": "node scripts/check-lint-exemptions.js",
+    "lint:modules": "node scripts/check-module-tests.js",
     "format": "biome format --write . && prettier --write \"**/*.md\"",
     "format:check": "biome format . && prettier --check \"**/*.md\"",
-    "check": "npm run format:check && npm run lint:oxlint && npm run lint:exemptions && npm run typecheck && npm run lint:boundaries && npm run test && npm run lint:tokens",
+    "check": "npm run format:check && npm run lint:oxlint && npm run lint:exemptions && npm run typecheck && npm run lint:boundaries && npm run lint:modules && npm run test && npm run lint:tokens",
     "prepare": "husky"
   },
   "dependencies": {

@@ -16,7 +16,9 @@ agent-browser install
 
 Start the app with `npm run dev` first. The examples below use
 `http://localhost:5173`, the dev server's default address — if `npm run dev`
-printed a different one, use that.
+printed a different one, use that. Wait for it with
+`until curl -s localhost:5173 >/dev/null; do sleep 1; done` rather than a
+fixed sleep.
 
 A screenshot is pixels. To verify a fix you need a yes or a no, so read the
 DOM:
@@ -54,17 +56,24 @@ the UI.
 
 ## Signing in
 
-Every page acts as the user in the session. Pick a seeded user by email, and
-switch to them from a page that is already open:
+Every page past the catalogue needs a user in the session. Switch to one by
+posting to `/api/switch-user` from an open page:
 
 ```bash
-id=$(node -p "new (require('better-sqlite3'))('data.db').prepare('select id from users where email = ?').pluck().get('emma.wilson@student.dev')")
-agent-browser open http://localhost:5173/courses
-agent-browser eval "fetch('/api/switch-user', { method: 'POST', body: new URLSearchParams({ userId: '$id' }) }).then((response) => response.ok)"
+agent-browser open http://localhost:5173/
+agent-browser eval "fetch('/api/switch-user',{method:'POST',body:new URLSearchParams({userId:'5'})}).then(r=>r.status)"
 ```
 
-`scripts/seed.ts` has the other users. The factory's workflows install
-agent-browser for you.
+`npm run db:seed` on a fresh database gives these ids:
+
+| id  | User             | Who                                                      |
+| --- | ---------------- | -------------------------------------------------------- |
+| 1   | Alex Rivera      | Admin                                                    |
+| 2   | Sarah Chen       | Instructor                                               |
+| 5   | Emma Wilson      | Student, enrolled in `introduction-to-typescript`        |
+| 10  | Bossy McBossface | Student with no enrollments: the locked view of a lesson |
+
+`scripts/seed.ts` has the rest.
 
 ## Two things that will bite you
 

@@ -329,6 +329,19 @@ jobs:
         if: env.AGENT_PROVIDER == 'opencode'
         run: npm install -g opencode-ai@1
 
+      - name: Cache agent-browser's Chrome
+        uses: actions/cache@v4
+        with:
+          path: ~/.agent-browser/browsers
+          key: agent-browser-0.27.0-${{ runner.os }}
+
+      - name: Install agent-browser
+        # The agent drives the app with it for screenshots and checks. Without
+        # it here, each run installs it mid-session.
+        run: |
+          npm install -g agent-browser@0.27.0
+          agent-browser install
+
       - name: Decompose the spec into a queue
         env:
           # Only the chosen agent's credential reaches this step.
@@ -447,17 +460,18 @@ jobs:
         if: env.AGENT_PROVIDER == 'opencode'
         run: npm install -g opencode-ai@1
 
+      - name: Cache agent-browser's Chrome
+        uses: actions/cache@v4
+        with:
+          path: ~/.agent-browser/browsers
+          key: agent-browser-0.27.0-${{ runner.os }}
+
       - name: Install agent-browser
-        # The agent drives the app with it: docs/agents/agent-browser.md. Not
-        # every ticket shows in the UI, so a browser that does not start is a
-        # warning. --no-sandbox: the runner blocks the user namespaces that
-        # Chrome's sandbox needs.
+        # The agent drives the app with it for screenshots and checks. Without
+        # it here, each run installs it mid-session.
         run: |
-          echo "AGENT_BROWSER_ARGS=--no-sandbox" >> "$GITHUB_ENV"
-          export AGENT_BROWSER_ARGS=--no-sandbox
-          npm install -g agent-browser && agent-browser install \
-            && agent-browser open about:blank && agent-browser close \
-            || echo "::warning::agent-browser does not start on this runner."
+          npm install -g agent-browser@0.27.0
+          agent-browser install
 
       - name: Migrate and seed the database
         run: |
