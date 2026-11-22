@@ -44,7 +44,16 @@ name: Agent — Review A Pull Request
 #   still a human's.
 #
 # WHAT IT NEEDS
-#   secrets.CLAUDE_CODE_OAUTH_TOKEN — the agent's auth token.
+#   vars.AGENT_REVIEW — which agent runs: `claude` (the
+#     default, when unset) or `opencode`.
+#   secrets.CLAUDE_CODE_OAUTH_TOKEN — the Claude agent's auth token.
+#   secrets.OPENCODE_API_KEY — the OpenCode agent's key, a personal key on an
+#     OpenCode Go subscription. Only needed if a job runs `opencode`.
+#   vars.CLAUDE_MODEL — optional, the Claude model (claude-sonnet-5-5).
+#   vars.OPENCODE_MODEL — optional, the OpenCode model as provider/model.
+#     Only the chosen agent's credential reaches the agent's step. To add
+#     an agent or change a default, see
+#     .sandcastle/agent-workflows/shared/common.ts.
 #   secrets.FACTORY_PAT — the factory's one token. Only the steps that call
 #     GitHub get it; the agent's step does not. It pushes the review's
 #     commits and posts its verdict and inline comments, so it needs
@@ -90,6 +99,8 @@ jobs:
     timeout-minutes: 30
 
     env:
+      # Which agent runs: claude (unset) or opencode. See shared/common.ts.
+      AGENT_PROVIDER: ${{ vars.AGENT_REVIEW || 'claude' }}
       GH_REPO: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       BRANCH: ${{ github.event.pull_request.head.ref }}
@@ -161,7 +172,13 @@ jobs:
         run: npm ci
 
       - name: Install Claude Code
+        if: env.AGENT_PROVIDER == 'claude'
         run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install OpenCode
+        # 1.x: Sandcastle 0.14 drives the OpenCode V1 command line.
+        if: env.AGENT_PROVIDER == 'opencode'
+        run: npm install -g opencode-ai@1
 
       - name: Migrate and seed the database
         # The pre-commit hook runs on every commit the agent makes, and the
@@ -185,7 +202,11 @@ jobs:
 
       - name: Review the pull request
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Only the chosen agent's credential reaches this step.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ env.AGENT_PROVIDER == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          OPENCODE_API_KEY: ${{ env.AGENT_PROVIDER == 'opencode' && secrets.OPENCODE_API_KEY || '' }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL }}
           OUTPUT_DIR: ${{ runner.temp }}
         run: npx tsx .sandcastle/agent-workflows/review/review.ts
 
