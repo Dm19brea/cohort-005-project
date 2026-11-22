@@ -3,7 +3,7 @@ import type { Route } from "./+types/saved";
 import { db } from "~/db";
 import { people } from "~/modules/permissions/person.server";
 import { listBookmarks } from "~/lib/bookmarks.server";
-import { listNotes } from "~/lib/notes.server";
+import { lessonNotes } from "~/modules/lesson-notes/index.server";
 import { Card, CardContent } from "~/components/ui/card";
 import { Bookmark, NotebookPen } from "lucide-react";
 import { formatRelativeTime } from "~/lib/utils";
@@ -20,7 +20,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return {
     savedBookmarks: listBookmarks(db, userId),
-    savedNotes: listNotes(db, userId),
+    savedNotes: lessonNotes.list(userId),
   };
 }
 
