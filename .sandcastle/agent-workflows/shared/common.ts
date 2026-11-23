@@ -44,7 +44,7 @@ export const AGENT_PROVIDERS = ["claude", "opencode"] as const;
 export type AgentProviderName = (typeof AGENT_PROVIDERS)[number];
 
 export const DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5";
-export const DEFAULT_OPENCODE_MODEL = "opencode-go/deepseek-v4.1-flash";
+export const DEFAULT_OPENCODE_MODEL = "opencode-go/deepseek-v4-pro";
 
 export const agentProviderName = (
   value: string | undefined
