@@ -359,7 +359,6 @@ function FullLesson({
             </div>
           )}
 
-          {/* Notes and Discussion — both confidential to people with access */}
           <Card id="lesson-workspace" className="mb-8 overflow-hidden">
             <Tabs
               defaultValue={currentUserId ? "notes" : "discussion"}
