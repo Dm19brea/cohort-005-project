@@ -30,32 +30,20 @@ function renderHome() {
 }
 
 describe("Home landing page", () => {
-  it("left-aligns the hero section", () => {
+  it("renders the hero, call to action and stats", () => {
     const html = renderHome();
 
-    expect(html).toContain('class="mx-auto max-w-6xl px-6 py-24"');
-    expect(html).not.toContain("py-24 text-center");
+    expect(html).toContain("Learn to code,");
+    expect(html).toContain("Browse Courses");
+    expect(html).toContain("Available Courses");
+    expect(html).toContain("Self-paced");
   });
 
-  it("left-aligns the hero copy instead of centring it", () => {
+  it("centres nothing on the page", () => {
     const html = renderHome();
 
-    expect(html).toContain("mt-6 max-w-2xl text-lg text-muted-foreground");
-    expect(html).not.toContain("mx-auto mt-6");
-  });
-
-  it("left-aligns the call-to-action row", () => {
-    const html = renderHome();
-
-    expect(html).toContain("mt-10 flex items-center gap-4");
+    expect(html).not.toContain("text-center");
     expect(html).not.toContain("justify-center gap-4");
-  });
-
-  it("left-aligns the stats strip", () => {
-    const html = renderHome();
-
-    expect(html).not.toContain('class="text-center"');
-    expect(html).toContain("mb-3 flex size-12 items-center justify-center");
-    expect(html).not.toContain("mx-auto mb-3");
+    expect(html).not.toMatch(/mx-auto (mt|mb)-/);
   });
 });
