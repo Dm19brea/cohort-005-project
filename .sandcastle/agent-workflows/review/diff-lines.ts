@@ -1,6 +1,6 @@
 // The lines GitHub accepts an inline review comment on: every line in a hunk
 // of the diff, on the new side, per file. A review with one comment outside
-// the hunks is rejected whole, so the workflow drops those comments first.
+// the hunks is rejected whole, so review.ts moves those findings to the verdict.
 export const diffLines = (diff: string): Map<string, Set<number>> => {
   const files = new Map<string, Set<number>>();
   let inHeader = false;

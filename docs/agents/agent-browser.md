@@ -52,6 +52,20 @@ change you are reporting on trust.
 Screenshots are PR evidence: a before and an after for a change that shows in
 the UI.
 
+## Signing in
+
+Every page acts as the user in the session. Pick a seeded user by email, and
+switch to them from a page that is already open:
+
+```bash
+id=$(node -p "new (require('better-sqlite3'))('data.db').prepare('select id from users where email = ?').pluck().get('emma.wilson@student.dev')")
+agent-browser open http://localhost:5173/courses
+agent-browser eval "fetch('/api/switch-user', { method: 'POST', body: new URLSearchParams({ userId: '$id' }) }).then((response) => response.ok)"
+```
+
+`scripts/seed.ts` has the other users. The factory's workflows install
+agent-browser for you.
+
 ## Two things that will bite you
 
 **Hydration lags "networkidle".** The button is in the server HTML before

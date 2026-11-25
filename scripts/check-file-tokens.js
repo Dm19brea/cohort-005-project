@@ -1,8 +1,16 @@
 // Fails when a file is too big for an agent to read and edit in one go.
 // Tokens are estimated as bytes / 4, which is close enough for code.
-// Usage: node scripts/check-file-tokens.js <file>...
+//
+// The limit is a ratchet. A file that was already over it at HEAD may change,
+// but may not grow: a small change to an old file must not turn into a
+// refactor of that file.
+//
+// Usage: node scripts/check-file-tokens.js [<file>...]
+// With no files, it checks everything that differs from HEAD.
 
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { relative } from "node:path";
 
 const MAX_TOKENS = 5000;
 const BYTES_PER_TOKEN = 4;
@@ -15,23 +23,89 @@ const IGNORED = [
   /^\.github\/workflows\/[^/]+\.yml$/,
 ];
 
+const git = (...args) =>
+  execFileSync("git", args, {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+
+const list = (...args) =>
+  git(...args)
+    .split("\0")
+    .filter(Boolean);
+
+const changedFiles = () => [
+  ...list("diff", "--name-only", "--relative", "-z", "HEAD"),
+  ...list("ls-files", "--others", "--exclude-standard", "-z"),
+];
+
+// A renamed file keeps the size it had under its old name.
+const renames = () => {
+  const fields = list(
+    "diff",
+    "--name-status",
+    "--diff-filter=R",
+    "-M",
+    "-z",
+    "HEAD"
+  );
+  const oldNames = new Map();
+  for (let i = 0; i < fields.length; i += 3) {
+    oldNames.set(fields[i + 2], fields[i + 1]);
+  }
+  return oldNames;
+};
+
+const tokensIn = (bytes) => Math.ceil(bytes / BYTES_PER_TOKEN);
+
+const tokensAtHead = (file) => {
+  try {
+    return tokensIn(Number(git("cat-file", "-s", `HEAD:${file}`)));
+  } catch {
+    return 0; // a new file
+  }
+};
+
 const isBinary = (contents) => contents.subarray(0, 8000).includes(0);
 
-const oversized = process.argv
-  .slice(2)
-  .map((file) => file.replaceAll("\\", "/").replace(`${process.cwd()}/`, ""))
+const args = process.argv.slice(2);
+const oldNames = renames();
+
+const oversized = (args.length > 0 ? args : changedFiles())
+  .map((file) => relative(process.cwd(), file).replaceAll("\\", "/"))
   .filter((file) => !IGNORED.some((pattern) => pattern.test(file)))
+  .filter((file) => existsSync(file) && statSync(file).isFile())
   .map((file) => ({ file, contents: readFileSync(file) }))
   .filter(({ contents }) => !isBinary(contents))
-  .map(({ file, contents }) => ({
+  .map(({ file, contents }) => ({ file, tokens: tokensIn(contents.length) }))
+  .filter(({ tokens }) => tokens > MAX_TOKENS)
+  .map(({ file, tokens }) => ({
     file,
-    tokens: Math.ceil(contents.length / BYTES_PER_TOKEN),
+    tokens,
+    before: tokensAtHead(oldNames.get(file) ?? file),
   }))
-  .filter(({ tokens }) => tokens > MAX_TOKENS);
+  .filter(({ tokens, before }) => tokens > Math.max(MAX_TOKENS, before));
 
-if (oversized.length > 0) {
+const grown = oversized.filter(({ before }) => before > MAX_TOKENS);
+const tooBig = oversized.filter(({ before }) => before <= MAX_TOKENS);
+
+if (grown.length > 0) {
+  console.error(
+    `These files were already over ${MAX_TOKENS} tokens (bytes / 4), and grew:\n`
+  );
+  for (const { file, tokens, before } of grown) {
+    console.error(`  ${file}: ~${before} tokens at HEAD, ~${tokens} now`);
+  }
+  console.error(`
+Move what you added into another file, until this one is no bigger than it was.
+Leave the rest of it where it is: splitting it is a separate ticket.
+`);
+}
+
+if (tooBig.length > 0) {
   console.error(`These files are over ${MAX_TOKENS} tokens (bytes / 4):\n`);
-  for (const { file, tokens } of oversized) {
+  for (const { file, tokens } of tooBig) {
     console.error(`  ${file}: ~${tokens} tokens`);
   }
   console.error(`
@@ -52,7 +126,10 @@ How to split:
   into a fixtures file in the same tests/ folder.
 - Scripts and seed data: move large data literals into their own files and
   import them.
+`);
+}
 
-When you are done, run \`npm run check\` and commit again.`);
+if (oversized.length > 0) {
+  console.error("When you are done, run `npm run check` and commit again.");
   process.exit(1);
 }
