@@ -17,6 +17,7 @@ import {
   User,
   Moon,
   Sun,
+  type LucideIcon,
 } from "lucide-react";
 import { CourseImage } from "~/components/course-image";
 import { DevUI } from "~/components/dev-ui";
@@ -162,6 +163,26 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
+function Stat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+        <Icon className="size-6 text-primary" />
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
 export default function Home({ loaderData }: Route.ComponentProps) {
   const {
     featuredCourses,
@@ -234,17 +255,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <h1 className="max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">
           Learn to code,
           <br />
           <span className="text-muted-foreground">at your own pace</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+        <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
           Structured courses built by experienced instructors. Track your
           progress, take quizzes, and build real-world skills.
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
+        <div className="mt-10 flex items-center gap-4">
           <Button asChild size="lg">
             <Link to="/courses">
               Browse Courses
@@ -256,29 +277,21 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
       <section className="border-y border-border bg-muted/50 py-16">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 sm:grid-cols-3">
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <BookOpen className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCourses}</p>
-            <p className="text-sm text-muted-foreground">Available Courses</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <GraduationCap className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCategories}</p>
-            <p className="text-sm text-muted-foreground">Categories</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">Self-paced</p>
-            <p className="text-sm text-muted-foreground">
-              Learn on your schedule
-            </p>
-          </div>
+          <Stat
+            icon={BookOpen}
+            value={totalCourses}
+            label="Available Courses"
+          />
+          <Stat
+            icon={GraduationCap}
+            value={totalCategories}
+            label="Categories"
+          />
+          <Stat
+            icon={Users}
+            value="Self-paced"
+            label="Learn on your schedule"
+          />
         </div>
       </section>
 
@@ -341,7 +354,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       )}
 
       <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-6 text-center text-sm text-muted-foreground">
+        <div className="mx-auto max-w-6xl px-6 text-sm text-muted-foreground">
           Cadence
         </div>
       </footer>
