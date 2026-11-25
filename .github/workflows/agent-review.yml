@@ -180,6 +180,18 @@ jobs:
         if: env.AGENT_PROVIDER == 'opencode'
         run: npm install -g opencode-ai@1
 
+      - name: Install agent-browser
+        # The agent drives the app with it: docs/agents/agent-browser.md. Not
+        # every ticket shows in the UI, so a browser that does not start is a
+        # warning. --no-sandbox: the runner blocks the user namespaces that
+        # Chrome's sandbox needs.
+        run: |
+          echo "AGENT_BROWSER_ARGS=--no-sandbox" >> "$GITHUB_ENV"
+          export AGENT_BROWSER_ARGS=--no-sandbox
+          npm install -g agent-browser && agent-browser install \
+            && agent-browser open about:blank && agent-browser close \
+            || echo "::warning::agent-browser does not start on this runner."
+
       - name: Migrate and seed the database
         # The pre-commit hook runs on every commit the agent makes, and the
         # repo's checks need a database.
@@ -302,8 +314,9 @@ jobs:
       - name: Post the inline comments
         # One review, event COMMENT, with a comment on each line the agent
         # left a finding on. They go where the fixes went: the fallback PR if
-        # the push was rejected. review.ts already dropped every comment
-        # outside the diff, because GitHub rejects the whole review for one.
+        # the push was rejected. review.ts already moved every comment
+        # outside the diff to the verdict: GitHub rejects the whole review for
+        # one.
         env:
           GH_TOKEN: ${{ secrets.FACTORY_PAT }}
           TARGET: ${{ steps.fallback.outputs.number || github.event.pull_request.number }}

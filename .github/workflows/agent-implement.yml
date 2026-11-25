@@ -148,6 +148,18 @@ jobs:
         if: env.AGENT_PROVIDER == 'opencode'
         run: npm install -g opencode-ai@1
 
+      - name: Install agent-browser
+        # The agent drives the app with it: docs/agents/agent-browser.md. Not
+        # every ticket shows in the UI, so a browser that does not start is a
+        # warning. --no-sandbox: the runner blocks the user namespaces that
+        # Chrome's sandbox needs.
+        run: |
+          echo "AGENT_BROWSER_ARGS=--no-sandbox" >> "$GITHUB_ENV"
+          export AGENT_BROWSER_ARGS=--no-sandbox
+          npm install -g agent-browser && agent-browser install \
+            && agent-browser open about:blank && agent-browser close \
+            || echo "::warning::agent-browser does not start on this runner."
+
       - name: Migrate and seed the database
         # The agent gets a real database, because half of this repo's checks
         # need one. It is disposable: a fresh one, migrated and seeded, on

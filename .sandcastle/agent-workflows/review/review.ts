@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
@@ -35,11 +36,26 @@ const git = (...args: string[]): string =>
 // The diff after the agent's commits: the comments land on that.
 const hunks = diffLines(git("diff", `origin/${BASE_REF}...HEAD`));
 const { comments: found }: z.infer<typeof reviewSchema> = result.output;
-const comments = found.filter(({ path: file, line }) => {
-  if (hunks.get(file)?.has(line)) return true;
-  console.error(`Dropping the comment on ${file}:${line}: not in the diff.`);
-  return false;
-});
+const inDiff = ({ path: file, line }: (typeof found)[number]): boolean =>
+  hunks.get(file)?.has(line) ?? false;
+const comments = found.filter(inDiff);
+const outside = found.filter((comment) => !inDiff(comment));
+
+// GitHub takes no inline comment outside the diff, and a finding on a line is
+// written nowhere else, so these go at the end of the verdict.
+if (outside.length > 0) {
+  fs.appendFileSync(
+    "/tmp/review-verdict.md",
+    [
+      "",
+      "## Findings outside the diff",
+      ...outside.map(
+        ({ path: file, line, body }) => `- \`${file}:${line}\`: ${body}`
+      ),
+      "",
+    ].join("\n")
+  );
+}
 
 // The request body for POST /repos/{owner}/{repo}/pulls/{n}/reviews.
 writeJson("review-comments.json", {

@@ -42,10 +42,6 @@ Test setup calls the module's own functions. When the function you need does
 not exist, add it to the module rather than inserting rows directly, so a
 change to how the module stores its data leaves its tests alone.
 
-## Keep files under 5000 tokens
-
-Keep every file under 5000 tokens.
-
 ## Wrap related writes in a transaction
 
 Two writes that must both land, or neither, go in a transaction. If the second
@@ -113,3 +109,22 @@ Name and extract until a comment is unnecessary. A comment earns its place
 only for a _why_ the code cannot express: a constraint, a decision, a link to
 the ADR behind it. A comment that restates _what_ the code does goes stale the
 first time the code changes.
+
+## The diff is the ticket
+
+Every change in the diff serves the ticket. A refactor the ticket does not ask
+for gets its own ticket. A notes restyle once arrived inside a 2,000-line split
+of the lesson route, and the review stopped reading partway through.
+
+## What a person typed survives a change of view
+
+Switching a tab, closing a panel or paging a list keeps text that is not saved
+yet. Radix unmounts an inactive `TabsContent`, and a form's state goes with it:
+pass `forceMount`, as `courses.$slug.purchase.tsx` does, or hold the state
+above the tabs.
+
+## Kill a mutant with a test
+
+A surviving mutant gets a test that fails on it. The code under test changes
+only when the mutant shows it is wrong. Text a person reads stays as it was: a
+note limit once went from "2,000" to "2000" to please the mutation run.
